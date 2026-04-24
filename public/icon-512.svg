@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="108" fill="#FFFBF5"/>
+  <circle cx="256" cy="256" r="188" fill="#E9A4A0" opacity="0.18"/>
+  <circle cx="256" cy="256" r="140" fill="#E9A4A0" opacity="0.35"/>
+  <text
+    x="256"
+    y="256"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="Fraunces, Georgia, serif"
+    font-weight="700"
+    font-size="256"
+    fill="#3D2C1F"
+  >D</text>
+</svg>
