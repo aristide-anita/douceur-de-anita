@@ -6,6 +6,8 @@ import NouvelleCommande from './pages/NouvelleCommande'
 import FicheCommande from './pages/FicheCommande'
 import Recettes from './pages/Recettes'
 import Clients from './pages/Clients'
+import NouveauClient from './pages/NouveauClient'
+import FicheClient from './pages/FicheClient'
 import Finances from './pages/Finances'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="/commandes/:id" element={<FicheCommande />} />
         <Route path="/recettes" element={<Recettes />} />
         <Route path="/clients" element={<Clients />} />
+        <Route path="/clients/nouveau" element={<NouveauClient />} />
+        <Route path="/clients/:id" element={<FicheClient />} />
         <Route path="/finances" element={<Finances />} />
       </Route>
 
