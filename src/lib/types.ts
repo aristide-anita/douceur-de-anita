@@ -1,5 +1,5 @@
-// TypeScript types matching the Supabase schema.
-// These are kept hand-written (can later be regenerated with `supabase gen types`).
+// TypeScript types matching the Supabase schema (Sprint0 DDL).
+// Kept hand-written. Can later be replaced with `supabase gen types typescript`.
 
 // ---------- ENUMs ----------
 
@@ -11,16 +11,14 @@ export type StatutCommande =
   | 'livree'
   | 'annulee'
 
-export type StatutPaiement = 'impaye' | 'partiel' | 'paye' | 'rembourse'
+export type StatutPaiement = 'impaye' | 'acompte' | 'paye'
 
-export type TypeCommande = 'patisserie' | 'traiteur' | 'mixte'
-
-export type ModePaiement =
-  | 'especes'
-  | 'twint'
-  | 'virement'
-  | 'carte'
-  | 'facture'
+export type CategorieRecette =
+  | 'patisserie'
+  | 'traiteur_salee'
+  | 'traiteur_sucree'
+  | 'boisson'
+  | 'autre'
 
 export type UniteIngredient =
   | 'g'
@@ -28,163 +26,181 @@ export type UniteIngredient =
   | 'ml'
   | 'l'
   | 'piece'
-  | 'cuillere_cafe'
-  | 'cuillere_soupe'
+  | 'cuillere'
+  | 'pincee'
 
-export type TypeDepense =
-  | 'ingredients'
+export type CategorieDepense =
+  | 'matieres_premieres'
   | 'emballage'
   | 'materiel'
-  | 'transport'
-  | 'loyer'
   | 'marketing'
+  | 'deplacement'
+  | 'abonnement'
   | 'autre'
 
-export type RoleUtilisateur = 'proprietaire' | 'employe' | 'assistant'
+export type RoleUtilisateur =
+  | 'patronne'
+  | 'assistant'
+  | 'comptable'
+  | 'lecture_seule'
 
 // ---------- Profile ----------
 
 export interface Profile {
   id: string
   email: string
-  prenom: string | null
-  nom: string | null
-  telephone: string | null
+  nom_complet: string | null
   role: RoleUtilisateur
-  avatar_url: string | null
-  created_at: string
-  updated_at: string
+  tarif_horaire_chf: number
+  cree_le: string
+  modifie_le: string
 }
 
 // ---------- Client ----------
 
 export interface Client {
   id: string
-  user_id: string
-  prenom: string
-  nom: string | null
-  email: string | null
+  nom: string
   telephone: string | null
+  email: string | null
   adresse: string | null
-  code_postal: string | null
   ville: string | null
-  notes: string | null
-  allergies: string | null
-  date_anniversaire: string | null // ISO date
-  created_at: string
-  updated_at: string
+  code_postal: string | null
+  note: string | null
+  cree_par: string | null
+  cree_le: string
+  modifie_le: string
 }
 
 // ---------- Fournisseur ----------
 
 export interface Fournisseur {
   id: string
-  user_id: string
   nom: string
-  contact: string | null
-  email: string | null
+  type: string | null
   telephone: string | null
+  email: string | null
   adresse: string | null
-  notes: string | null
-  created_at: string
-  updated_at: string
-}
-
-// ---------- Ingredient ----------
-
-export interface Ingredient {
-  id: string
-  user_id: string
-  nom: string
-  unite: UniteIngredient
-  prix_unitaire: number | null // CHF par unité
-  stock_actuel: number | null
-  stock_minimum: number | null
-  fournisseur_id: string | null
-  allergene: boolean
-  notes: string | null
-  created_at: string
-  updated_at: string
+  site_web: string | null
+  note: string | null
+  actif: boolean
+  cree_par: string | null
+  cree_le: string
+  modifie_le: string
 }
 
 // ---------- Recette ----------
 
 export interface Recette {
   id: string
-  user_id: string
   nom: string
+  categorie: CategorieRecette
   description: string | null
-  categorie: string | null
-  portions: number | null
-  temps_preparation_min: number | null
-  temps_cuisson_min: number | null
-  instructions: string | null
-  prix_vente: number | null // CHF
-  cout_revient: number | null // CHF calculé
-  image_url: string | null
+  photo_url: string | null
+  portions: number
+  temps_prepa_min: number
+  cout_matieres_forfait: number
+  cout_emballage: number
+  prix_vente: number
   actif: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface RecetteIngredient {
-  id: string
-  recette_id: string
-  ingredient_id: string
-  quantite: number
-  unite: UniteIngredient
+  favori: boolean
+  cree_par: string | null
+  cree_le: string
+  modifie_le: string
 }
 
 // ---------- Commande ----------
 
 export interface Commande {
   id: string
-  user_id: string
-  numero: string
+  numero_commande: string | null
   client_id: string | null
-  type: TypeCommande
+  date_evenement: string
+  heure_evenement: string | null
+  lieu_livraison: string | null
   statut: StatutCommande
   statut_paiement: StatutPaiement
-  mode_paiement: ModePaiement | null
-  date_commande: string // ISO
-  date_livraison: string // ISO
-  heure_livraison: string | null
-  adresse_livraison: string | null
-  nombre_personnes: number | null
-  sous_total: number
-  tva: number
-  total: number
-  acompte: number
-  reste_a_payer: number
-  notes: string | null
-  created_at: string
-  updated_at: string
+  prix_total: number
+  acompte_recu: number
+  note_interne: string | null
+  note_client: string | null
+  cree_par: string | null
+  cree_le: string
+  modifie_le: string
 }
 
-export interface CommandeLigne {
+export interface CommandeAvecClient extends Commande {
+  client: Pick<Client, 'id' | 'nom' | 'telephone'> | null
+}
+
+export interface CommandeItem {
   id: string
   commande_id: string
   recette_id: string | null
-  libelle: string
+  nom_libre: string | null
   quantite: number
   prix_unitaire: number
-  total: number
+  note: string | null
+  ordre: number
+  cree_le: string
 }
 
 // ---------- Finance ----------
 
 export interface Finance {
   id: string
-  user_id: string
-  date: string // ISO date
-  type: TypeDepense
+  date_depense: string
   libelle: string
-  montant: number // CHF
+  montant_chf: number
+  categorie: CategorieDepense
   fournisseur_id: string | null
   commande_id: string | null
-  mode_paiement: ModePaiement | null
-  justificatif_url: string | null
-  notes: string | null
-  created_at: string
-  updated_at: string
+  recu_url: string | null
+  note: string | null
+  cree_par: string | null
+  cree_le: string
+  modifie_le: string
 }
+
+// ---------- Ingredient ----------
+
+export interface Ingredient {
+  id: string
+  nom: string
+  unite_achat: UniteIngredient
+  prix_unitaire_chf: number
+  fournisseur_principal_id: string | null
+  stock_actuel: number
+  stock_minimum: number
+  note: string | null
+  actif: boolean
+  cree_par: string | null
+  cree_le: string
+  modifie_le: string
+}
+
+// ---------- Labels d'UI ----------
+
+export const STATUT_COMMANDE_LABELS: Record<StatutCommande, string> = {
+  brouillon: 'Brouillon',
+  confirmee: 'Confirmée',
+  en_preparation: 'En préparation',
+  prete: 'Prête',
+  livree: 'Livrée',
+  annulee: 'Annulée',
+}
+
+export const STATUT_PAIEMENT_LABELS: Record<StatutPaiement, string> = {
+  impaye: 'Impayé',
+  acompte: 'Acompte reçu',
+  paye: 'Payé',
+}
+
+export const STATUT_COMMANDE_ORDRE: StatutCommande[] = [
+  'brouillon',
+  'confirmee',
+  'en_preparation',
+  'prete',
+  'livree',
+  'annulee',
+]
