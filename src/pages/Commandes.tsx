@@ -206,7 +206,10 @@ export default function Commandes() {
       <ul className="grid gap-3">
         {commandesFiltrees.map((c) => (
           <li key={c.id}>
-            <article className="card hover:shadow-md transition p-5">
+            <Link
+              to={`/commandes/${c.id}`}
+              className="block card hover:shadow-md transition p-5 focus:outline-none focus:ring-2 focus:ring-dusty-pink/50"
+            >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
                   <h2 className="font-serif text-lg sm:text-xl leading-tight truncate">
@@ -281,7 +284,15 @@ export default function Commandes() {
                     </p>
                   )}
                 </div>
-                <label className="text-sm">
+                <label
+                  className="text-sm"
+                  onClick={(e) => {
+                    // Empêcher la navigation vers la fiche quand on
+                    // change juste le statut depuis la liste.
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                >
                   <span className="sr-only">Changer le statut</span>
                   <select
                     value={c.statut}
@@ -304,7 +315,7 @@ export default function Commandes() {
                   </select>
                 </label>
               </div>
-            </article>
+            </Link>
           </li>
         ))}
       </ul>

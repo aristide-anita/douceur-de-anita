@@ -185,8 +185,16 @@ export default function NouvelleCommande() {
       navigate('/commandes')
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : 'Erreur inconnue'
-      setErreur(msg)
+      // Les erreurs Supabase sont des objets {code, message, details, hint}
+      // et NE SONT PAS des instances d'Error.
+      const e = err as { message?: string; details?: string; hint?: string; code?: string }
+      const msg =
+        e?.message ||
+        (typeof err === 'string' ? err : '') ||
+        'Erreur inconnue'
+      const detail = e?.details || e?.hint || ''
+      const code = e?.code ? ` (code ${e.code})` : ''
+      setErreur(`${msg}${detail ? ' — ' + detail : ''}${code}`)
     },
   })
 

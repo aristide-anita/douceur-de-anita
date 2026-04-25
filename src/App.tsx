@@ -3,6 +3,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Commandes from './pages/Commandes'
 import NouvelleCommande from './pages/NouvelleCommande'
+import FicheCommande from './pages/FicheCommande'
 import Recettes from './pages/Recettes'
 import Clients from './pages/Clients'
 import Finances from './pages/Finances'
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/tableau-de-bord" element={<Dashboard />} />
         <Route path="/commandes" element={<Commandes />} />
         <Route path="/commandes/nouvelle" element={<NouvelleCommande />} />
+        <Route path="/commandes/:id" element={<FicheCommande />} />
         <Route path="/recettes" element={<Recettes />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/finances" element={<Finances />} />
