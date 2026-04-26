@@ -16,6 +16,7 @@ import {
   Commande,
   CommandeItem,
   Client,
+  Recette,
   StatutCommande,
   StatutPaiement,
   STATUT_COMMANDE_LABELS,
@@ -25,6 +26,7 @@ import {
 interface LigneArticle {
   id: string // local uuid (UI key)
   dbId: string | null // id en base si existant
+  recette_id: string | null
   designation: string
   quantite: number
   prix_unitaire: number
@@ -40,6 +42,7 @@ function ligneVide(): LigneArticle {
   return {
     id: crypto.randomUUID(),
     dbId: null,
+    recette_id: null,
     designation: '',
     quantite: 1,
     prix_unitaire: 0,
@@ -105,6 +108,22 @@ export default function FicheCommande() {
     },
   })
 
+  // Recettes actives (pour le sélecteur par ligne)
+  const { data: recettes } = useQuery<Recette[]>({
+    queryKey: ['recettes', 'actives'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('recettes')
+        .select('*')
+        .eq('actif', true)
+        .order('favori', { ascending: false })
+        .order('nom', { ascending: true })
+        .limit(500)
+      if (error) throw error
+      return (data ?? []) as Recette[]
+    },
+  })
+
   // Pré-remplir le formulaire au chargement
   useEffect(() => {
     if (!data) return
@@ -122,6 +141,7 @@ export default function FicheCommande() {
         ? items.map((it) => ({
             id: it.id,
             dbId: it.id,
+            recette_id: it.recette_id ?? null,
             designation: it.nom_libre || '',
             quantite: Number(it.quantite) || 1,
             prix_unitaire: Number(it.prix_unitaire) || 0,
@@ -141,10 +161,55 @@ export default function FicheCommande() {
     [lignes]
   )
 
+  // Marge estimée à partir des recettes liées
+  const marge = useMemo(() => {
+    const recById = new Map<string, Recette>()
+    for (const r of recettes ?? []) recById.set(r.id, r)
+    let coutTotal = 0
+    let lignesAvecRecette = 0
+    let lignesValides = 0
+    for (const l of lignes) {
+      if (l.designation.trim().length === 0) continue
+      lignesValides += 1
+      if (l.recette_id) {
+        const r = recById.get(l.recette_id)
+        if (r) {
+          const coutUnit =
+            (Number(r.cout_matieres_forfait) || 0) +
+            (Number(r.cout_emballage) || 0)
+          coutTotal += coutUnit * (Number(l.quantite) || 0)
+          lignesAvecRecette += 1
+        }
+      }
+    }
+    const margeBrute = total - coutTotal
+    const margePct = total > 0 ? (margeBrute / total) * 100 : 0
+    return {
+      coutTotal,
+      margeBrute,
+      margePct,
+      lignesAvecRecette,
+      lignesValides,
+    }
+  }, [lignes, recettes, total])
+
   const setLigne = (lid: string, patch: Partial<LigneArticle>) => {
     setLignes((prev) =>
       prev.map((l) => (l.id === lid ? { ...l, ...patch } : l))
     )
+  }
+  const choisirRecette = (lid: string, recetteId: string) => {
+    if (!recetteId) {
+      setLigne(lid, { recette_id: null })
+      return
+    }
+    const r = (recettes ?? []).find((x) => x.id === recetteId)
+    if (!r) return
+    setLigne(lid, {
+      recette_id: r.id,
+      designation: r.nom,
+      prix_unitaire: Number(r.prix_vente) || 0,
+    })
   }
   const supprimerLigne = (lid: string) => {
     setLignes((prev) =>
@@ -195,6 +260,7 @@ export default function FicheCommande() {
 
       const itemsPayload = lignesValides.map((l, i) => ({
         commande_id: id,
+        recette_id: l.recette_id,
         nom_libre: l.designation.trim(),
         quantite: Number(l.quantite) || 1,
         prix_unitaire: Number(l.prix_unitaire) || 0,
@@ -264,6 +330,9 @@ export default function FicheCommande() {
       </div>
     )
   }
+
+  const margePositive = marge.margeBrute >= 0
+  const margeCouleur = margePositive ? 'text-emerald-700' : 'text-alert-red'
 
   return (
     <div>
@@ -371,6 +440,24 @@ export default function FicheCommande() {
                 key={l.id}
                 className="grid grid-cols-12 gap-2 items-end border border-soft-taupe/40 rounded-2xl p-3"
               >
+                <label className="col-span-12 block">
+                  <span className="block text-xs text-warm-brown/60 mb-1">
+                    Recette (optionnel — pré-remplit le prix)
+                  </span>
+                  <select
+                    value={l.recette_id ?? ''}
+                    onChange={(e) => choisirRecette(l.id, e.target.value)}
+                    className="input w-full"
+                  >
+                    <option value="">— Article libre —</option>
+                    {(recettes ?? []).map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.favori ? '★ ' : ''}
+                        {r.nom} · {formatCHF(Number(r.prix_vente) || 0)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className="col-span-12 sm:col-span-5 block">
                   <span className="block text-xs text-warm-brown/60 mb-1">
                     Désignation
@@ -446,6 +533,43 @@ export default function FicheCommande() {
           <p className="mt-4 text-right text-warm-brown font-medium">
             Total : {formatCHF(total)}
           </p>
+        </section>
+
+        {/* Marges (estimation à partir des recettes liées) */}
+        <section className="card p-5">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
+            <h2 className="font-serif text-lg">Marges estimées</h2>
+            <span className="text-xs text-warm-brown/60">
+              {marge.lignesAvecRecette} sur {marge.lignesValides} article
+              {marge.lignesValides > 1 ? 's' : ''} liés à une recette
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3 rounded-2xl bg-soft-taupe/20 p-4">
+            <div>
+              <p className="text-xs text-warm-brown/60">Coût matières</p>
+              <p className="font-serif text-lg mt-0.5">
+                {formatCHF(marge.coutTotal)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-warm-brown/60">Marge brute</p>
+              <p className={'font-serif text-lg mt-0.5 ' + margeCouleur}>
+                {formatCHF(marge.margeBrute)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-warm-brown/60">Marge %</p>
+              <p className={'font-serif text-lg mt-0.5 ' + margeCouleur}>
+                {marge.margePct.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+          {marge.lignesAvecRecette < marge.lignesValides && (
+            <p className="text-xs text-warm-brown/60 mt-2">
+              Astuce : lie chaque article à une recette pour affiner
+              l'estimation du coût.
+            </p>
+          )}
         </section>
 
         {/* Statut & paiement */}
@@ -578,8 +702,7 @@ export default function FicheCommande() {
               <button
                 type="button"
                 onClick={() => setConfirmerSuppression(false)}
-                className="text-sm text-warm-brown/70 hover:text-warm-brown px-2 py-2"
-              >
+                className="text-sm text-warm-brown/70 hover:text-warm-brown px-2 py-2">
                 Annuler
               </button>
             </div>

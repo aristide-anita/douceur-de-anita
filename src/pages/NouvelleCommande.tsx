@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Client,
+  Recette,
   StatutCommande,
   StatutPaiement,
   STATUT_COMMANDE_LABELS,
@@ -14,6 +15,7 @@ import {
 
 interface LigneArticle {
   id: string
+  recette_id: string | null
   designation: string
   quantite: number
   prix_unitaire: number
@@ -23,6 +25,7 @@ interface LigneArticle {
 function nouvelleLigne(): LigneArticle {
   return {
     id: crypto.randomUUID(),
+    recette_id: null,
     designation: '',
     quantite: 1,
     prix_unitaire: 0,
@@ -80,6 +83,22 @@ export default function NouvelleCommande() {
     },
   })
 
+  // Recettes actives (pour le sélecteur par ligne)
+  const { data: recettes } = useQuery<Recette[]>({
+    queryKey: ['recettes', 'actives'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('recettes')
+        .select('*')
+        .eq('actif', true)
+        .order('favori', { ascending: false })
+        .order('nom', { ascending: true })
+        .limit(500)
+      if (error) throw error
+      return (data ?? []) as Recette[]
+    },
+  })
+
   const total = useMemo(
     () =>
       lignes.reduce(
@@ -92,6 +111,33 @@ export default function NouvelleCommande() {
   const majLigne = (id: string, champ: keyof LigneArticle, valeur: unknown) => {
     setLignes((prev) =>
       prev.map((l) => (l.id === id ? { ...l, [champ]: valeur } : l))
+    )
+  }
+
+  // Quand on choisit une recette : on pré-remplit désignation + prix
+  // (l'utilisateur peut toujours surcharger ensuite)
+  const choisirRecette = (ligneId: string, recetteId: string) => {
+    if (!recetteId) {
+      setLignes((prev) =>
+        prev.map((l) =>
+          l.id === ligneId ? { ...l, recette_id: null } : l
+        )
+      )
+      return
+    }
+    const r = (recettes ?? []).find((x) => x.id === recetteId)
+    if (!r) return
+    setLignes((prev) =>
+      prev.map((l) =>
+        l.id === ligneId
+          ? {
+              ...l,
+              recette_id: r.id,
+              designation: r.nom,
+              prix_unitaire: Number(r.prix_vente) || 0,
+            }
+          : l
+      )
     )
   }
 
@@ -166,6 +212,7 @@ export default function NouvelleCommande() {
       // 4. Créer les items
       const itemsPayload = lignesValides.map((l, i) => ({
         commande_id: cmd.id,
+        recette_id: l.recette_id,
         nom_libre: l.designation.trim(),
         quantite: Number(l.quantite) || 1,
         prix_unitaire: Number(l.prix_unitaire) || 0,
@@ -400,6 +447,24 @@ export default function NouvelleCommande() {
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-6">
+                  <label className="block sm:col-span-6">
+                    <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+                      Recette (optionnel — pré-remplit le prix)
+                    </span>
+                    <select
+                      value={l.recette_id ?? ''}
+                      onChange={(e) => choisirRecette(l.id, e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">— Article libre —</option>
+                      {(recettes ?? []).map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.favori ? '★ ' : ''}
+                          {r.nom} · {formatCHF(Number(r.prix_vente) || 0)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="block sm:col-span-4">
                     <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
                       Désignation
