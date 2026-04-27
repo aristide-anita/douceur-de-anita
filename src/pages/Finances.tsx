@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -63,7 +64,13 @@ interface ItemAvecRecette {
   quantite: number
   prix_unitaire: number
   recette_id: string | null
-  recette: RecetteMini | null
+  recette: RecetteMini | RecetteMini[] | null
+}
+
+function pickRecette(r: RecetteMini | RecetteMini[] | null): RecetteMini | null {
+  if (!r) return null
+  if (Array.isArray(r)) return r[0] ?? null
+  return r
 }
 
 interface CommandeFinance {
@@ -103,7 +110,6 @@ export default function Finances() {
   // 6 mois glissants (mois courant inclus)
   const now = new Date()
   const debutFenetre = startOfMonth(addMonths(now, -5))
-  const finFenetre = addMonths(startOfMonth(now), 1) // 1er du mois suivant exclus
 
   const { data, isLoading, error } = useQuery<CommandeFinance[]>({
     queryKey: ['finances', 'commandes', monthKey(debutFenetre)],
@@ -147,10 +153,12 @@ export default function Finances() {
     const coutCommande = (c: CommandeFinance): number => {
       let total = 0
       for (const it of c.items ?? []) {
-        if (it.recette_id && it.recette) {
+        const r = pickRecette(it.recette)
+        if (it.recette_id && r) {
           total +=
             it.quantite *
-            (it.recette.cout_matieres_forfait + it.recette.cout_emballage)
+            (Number(r.cout_matieres_forfait ?? 0) +
+              Number(r.cout_emballage ?? 0))
         }
       }
       return total
@@ -205,9 +213,10 @@ export default function Finances() {
       if (!c.date_evenement || c.date_evenement < seuil) continue
       if (c.statut === 'annulee') continue
       for (const it of c.items ?? []) {
-        if (!it.recette_id || !it.recette) continue
+        const r = pickRecette(it.recette)
+        if (!it.recette_id || !r) continue
         const k = it.recette_id
-        if (!agg[k]) agg[k] = { nom: it.recette.nom, ca: 0, qte: 0 }
+        if (!agg[k]) agg[k] = { nom: r.nom, ca: 0, qte: 0 }
         agg[k].ca += Number(it.prix_unitaire ?? 0) * Number(it.quantite ?? 0)
         agg[k].qte += Number(it.quantite ?? 0)
       }
@@ -271,8 +280,6 @@ export default function Finances() {
   }
 
   const moisCourantLabel = moisShort(now)
-  const margeColor =
-    stats.margeBrute >= 0 ? 'text-emerald-700' : 'text-alert-red'
 
   return (
     <div className="space-y-8">
@@ -484,7 +491,7 @@ export default function Finances() {
 // ----------- Sous-composants -----------
 
 interface KpiCardProps {
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
   value: string
   hint: string
