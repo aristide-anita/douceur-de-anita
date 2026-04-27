@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
+  CalendarDays,
   Home,
   LogOut,
   ShoppingBag,
@@ -11,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext'
 
 const navItems = [
   { to: '/tableau-de-bord', label: 'Accueil', icon: Home },
+  { to: '/calendrier', label: 'Calendrier', icon: CalendarDays },
   { to: '/commandes', label: 'Commandes', icon: ShoppingBag },
   { to: '/recettes', label: 'Recettes', icon: BookOpen },
   { to: '/clients', label: 'Clients', icon: Users },
@@ -39,7 +41,6 @@ export default function Layout() {
           </div>
           <span className="font-serif text-2xl tracking-tight">Douceur</span>
         </div>
-
         <div className="flex items-center gap-4">
           {user?.email && (
             <span className="text-sm text-warm-brown/70">{user.email}</span>
@@ -93,7 +94,7 @@ export default function Layout() {
         aria-label="Navigation principale"
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-soft-taupe/70 bg-cream/95 backdrop-blur pb-safe"
       >
-        <ul className="grid grid-cols-5">
+        <ul className="grid grid-cols-6">
           {navItems.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <NavLink
@@ -101,7 +102,7 @@ export default function Layout() {
                 aria-label={label}
                 className={({ isActive }) =>
                   [
-                    'flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition min-h-[56px]',
+                    'flex flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition min-h-[56px]',
                     isActive
                       ? 'text-dusty-pink'
                       : 'text-warm-brown/60 hover:text-warm-brown',
