@@ -1,23 +1,15 @@
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { CalendarDays, CreditCard, Sparkles } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
 
 export default function Dashboard() {
-  const { user } = useAuth()
-
-  const prenom =
-    (user?.user_metadata?.prenom as string | undefined) ??
-    (user?.user_metadata?.first_name as string | undefined) ??
-    (user?.email ? user.email.split('@')[0] : 'Anita')
-
   const today = format(new Date(), "EEEE d MMMM yyyy", { locale: fr })
 
   return (
     <div>
       <header className="mb-8">
         <h1 className="font-serif text-3xl sm:text-4xl tracking-tight">
-          Bonjour, {capitalize(prenom)}
+          Bonjour, Anita
         </h1>
         <p className="mt-1 text-warm-brown/70 capitalize">{today}</p>
       </header>
@@ -58,7 +50,6 @@ function DashboardCard({ title, icon, tone }: DashboardCardProps) {
     taupe: 'bg-soft-taupe/70',
     caramel: 'bg-caramel/20',
   }
-
   return (
     <article className="card">
       <div className="flex items-center gap-3">
@@ -75,9 +66,4 @@ function DashboardCard({ title, icon, tone }: DashboardCardProps) {
       </p>
     </article>
   )
-}
-
-function capitalize(s: string) {
-  if (!s) return s
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }
