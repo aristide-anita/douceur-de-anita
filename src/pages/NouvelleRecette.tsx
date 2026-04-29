@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2, AlertCircle, Save, Star } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { CategorieRecette } from '../lib/types'
+import PhotoUpload from '../components/PhotoUpload'
 
 const CATEGORIE_LABELS: Record<CategorieRecette, string> = {
   patisserie: 'Pâtisserie',
@@ -44,6 +45,7 @@ export default function NouvelleRecette() {
   const [nom, setNom] = useState('')
   const [categorie, setCategorie] = useState<CategorieRecette>('patisserie')
   const [description, setDescription] = useState('')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [portions, setPortions] = useState<string>('1')
   const [tempsPrepa, setTempsPrepa] = useState<string>('0')
   const [coutMatieres, setCoutMatieres] = useState<string>('0')
@@ -77,6 +79,7 @@ export default function NouvelleRecette() {
           nom: nom.trim(),
           categorie,
           description: description.trim() || null,
+          photo_url: photoUrl,
           portions: Number(portions) || 1,
           temps_prepa_min: Number(tempsPrepa) || 0,
           cout_matieres_forfait: Number(coutMatieres) || 0,
@@ -176,6 +179,16 @@ export default function NouvelleRecette() {
               />
             </label>
           </div>
+        </section>
+
+        {/* Photo */}
+        <section className="card">
+          <h2 className="font-serif text-xl mb-4">Photo</h2>
+          <PhotoUpload
+            value={photoUrl}
+            onChange={setPhotoUrl}
+            disabled={enregistrer.isPending}
+          />
         </section>
 
         {/* Production */}
@@ -289,7 +302,7 @@ export default function NouvelleRecette() {
           </div>
         </section>
 
-        {/* ≑tat */}
+        {/* État */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">État</h2>
           <div className="flex flex-wrap gap-4">
@@ -315,7 +328,9 @@ export default function NouvelleRecette() {
                 <Star
                   className={
                     'h-4 w-4 ' +
-                    (favori ? 'fill-caramel text-caramel' : 'text-warm-brown/40')
+                    (favori
+                      ? 'fill-caramel text-caramel'
+                      : 'text-warm-brown/40')
                   }
                   aria-hidden="true"
                 />
