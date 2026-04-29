@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Recette, CategorieRecette } from '../lib/types'
+import PhotoUpload from '../components/PhotoUpload'
 
 const CATEGORIE_LABELS: Record<CategorieRecette, string> = {
   patisserie: 'Pâtisserie',
@@ -46,7 +47,6 @@ export default function FicheRecette() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
-
   const [erreur, setErreur] = useState<string | null>(null)
   const [confirmerSuppression, setConfirmerSuppression] = useState(false)
 
@@ -54,6 +54,7 @@ export default function FicheRecette() {
   const [nom, setNom] = useState('')
   const [categorie, setCategorie] = useState<CategorieRecette>('patisserie')
   const [description, setDescription] = useState('')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [portions, setPortions] = useState<string>('1')
   const [tempsPrepa, setTempsPrepa] = useState<string>('0')
   const [coutMatieres, setCoutMatieres] = useState<string>('0')
@@ -81,6 +82,7 @@ export default function FicheRecette() {
     setNom(data.nom ?? '')
     setCategorie(data.categorie)
     setDescription(data.description ?? '')
+    setPhotoUrl(data.photo_url ?? null)
     setPortions(String(data.portions ?? 1))
     setTempsPrepa(String(data.temps_prepa_min ?? 0))
     setCoutMatieres(String(data.cout_matieres_forfait ?? 0))
@@ -112,6 +114,7 @@ export default function FicheRecette() {
           nom: nom.trim(),
           categorie,
           description: description.trim() || null,
+          photo_url: photoUrl,
           portions: Number(portions) || 1,
           temps_prepa_min: Number(tempsPrepa) || 0,
           cout_matieres_forfait: Number(coutMatieres) || 0,
@@ -273,6 +276,16 @@ export default function FicheRecette() {
           </div>
         </section>
 
+        {/* Photo */}
+        <section className="card">
+          <h2 className="font-serif text-xl mb-4">Photo</h2>
+          <PhotoUpload
+            value={photoUrl}
+            onChange={setPhotoUrl}
+            disabled={sauver.isPending || supprimer.isPending}
+          />
+        </section>
+
         {/* Production */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Production</h2>
@@ -409,7 +422,9 @@ export default function FicheRecette() {
                 <Star
                   className={
                     'h-4 w-4 ' +
-                    (favori ? 'fill-caramel text-caramel' : 'text-warm-brown/40')
+                    (favori
+                      ? 'fill-caramel text-caramel'
+                      : 'text-warm-brown/40')
                   }
                   aria-hidden="true"
                 />
@@ -462,10 +477,7 @@ export default function FicheRecette() {
               >
                 {supprimer.isPending ? (
                   <>
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                     Suppression…
                   </>
                 ) : (
