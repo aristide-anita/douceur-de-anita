@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
   CalendarDays,
+  ChefHat,
   Home,
   LogOut,
   ShoppingBag,
@@ -11,15 +12,26 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
-const navItems = [
+interface NavItem {
+  to: string
+  label: string
+  shortLabel?: string
+  icon: typeof Home
+  mobile?: boolean
+}
+
+const navItems: NavItem[] = [
   { to: '/tableau-de-bord', label: 'Accueil', icon: Home },
   { to: '/calendrier', label: 'Calendrier', icon: CalendarDays },
+  { to: '/production', label: 'Production', shortLabel: 'Prod.', icon: ChefHat },
   { to: '/commandes', label: 'Commandes', icon: ShoppingBag },
   { to: '/recettes', label: 'Recettes', icon: BookOpen },
-  { to: '/ingredients', label: 'Ingrédients', icon: Sprout },
+  { to: '/ingredients', label: 'Ingrédients', shortLabel: 'Ingr.', icon: Sprout },
   { to: '/clients', label: 'Clients', icon: Users },
-  { to: '/finances', label: 'Finances', icon: Wallet },
+  { to: '/finances', label: 'Finances', icon: Wallet, mobile: false },
 ]
+
+const navMobile = navItems.filter((i) => i.mobile !== false)
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -97,7 +109,7 @@ export default function Layout() {
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-soft-taupe/70 bg-cream/95 backdrop-blur pb-safe print:!hidden"
       >
         <ul className="grid grid-cols-7">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {navMobile.map(({ to, label, shortLabel, icon: Icon }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -121,7 +133,7 @@ export default function Layout() {
                     >
                       <Icon className="h-5 w-5" aria-hidden="true" />
                     </span>
-                    <span>{label}</span>
+                    <span>{shortLabel ?? label}</span>
                   </>
                 )}
               </NavLink>

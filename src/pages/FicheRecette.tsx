@@ -19,10 +19,13 @@ import {
   CategorieRecette,
   RecetteIngredient,
 } from '../lib/types'
+import { UNITE_LABELS } from '../lib/types'
+import type { Ingredient } from '../lib/types'
 import PhotoUpload from '../components/PhotoUpload'
 import CompositionRecette, {
   type LigneCompo,
 } from '../components/CompositionRecette'
+import { useToast } from '../components/Toast'
 
 const CATEGORIE_LABELS: Record<CategorieRecette, string> = {
   patisserie: 'Pâtisserie',
@@ -102,6 +105,7 @@ export default function FicheRecette() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const toast = useToast()
   const [erreur, setErreur] = useState<string | null>(null)
   const [confirmerSuppression, setConfirmerSuppression] = useState(false)
 
@@ -119,6 +123,7 @@ export default function FicheRecette() {
   const [favori, setFavori] = useState(false)
   const [composition, setComposition] = useState<LigneCompo[]>([])
   const [coutAuto, setCoutAuto] = useState(false)
+  const [portionsCible, setPortionsCible] = useState<string>('')
 
   const onCoutTotalChange = (cout: number) => {
     if (coutAuto) setCoutMatieres(cout.toFixed(2))
@@ -188,6 +193,35 @@ export default function FicheRecette() {
     )
   }, [compositionDb])
 
+  // Charge les ingrédients pour résoudre les noms dans la mise à l'échelle
+  const { data: ingredientsListe = [] } = useQuery<Ingredient[]>({
+    queryKey: ['ingredients-actifs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ingredients')
+        .select('*')
+        .eq('actif', true)
+        .order('nom', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Ingredient[]
+    },
+    staleTime: 60_000,
+  })
+
+  const indexIngredient = useMemo(() => {
+    const m = new Map<string, Ingredient>()
+    for (const i of ingredientsListe) m.set(i.id, i)
+    return m
+  }, [ingredientsListe])
+
+  // Aperçu mise à l'échelle
+  const facteurScale = useMemo(() => {
+    const cible = Number(portionsCible)
+    const base = Number(portions) || 1
+    if (!cible || cible <= 0 || base <= 0) return 1
+    return cible / base
+  }, [portionsCible, portions])
+
   const calcul = useMemo(() => {
     const cm = Number(coutMatieres) || 0
     const ce = Number(coutEmballage) || 0
@@ -252,6 +286,7 @@ export default function FicheRecette() {
       qc.invalidateQueries({ queryKey: ['recettes'] })
       qc.invalidateQueries({ queryKey: ['recette', id] })
       qc.invalidateQueries({ queryKey: ['recette-ingredients', id] })
+      toast.succes('Recette enregistrée')
       navigate('/recettes')
     },
     onError: (err: unknown) => {
@@ -267,6 +302,7 @@ export default function FicheRecette() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['recettes'] })
+      toast.succes('Recette supprimée')
       navigate('/recettes')
     },
     onError: (err: unknown) => {
@@ -491,6 +527,70 @@ export default function FicheRecette() {
             onCoutTotalChange={onCoutTotalChange}
             disabled={sauver.isPending || supprimer.isPending}
           />
+
+          {composition.length > 0 && (
+            <div className="mt-5 pt-5 border-t border-soft-taupe/40">
+              <div className="flex flex-wrap items-end gap-3 mb-3">
+                <label className="block">
+                  <span className="text-sm text-warm-brown/80 mb-2 block">
+                    Calculer les quantités pour
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={portionsCible}
+                      onChange={(e) => setPortionsCible(e.target.value)}
+                      placeholder={String(portions)}
+                      className="input-field w-28"
+                    />
+                    <span className="text-sm text-warm-brown/70">
+                      portions{' '}
+                      <span className="text-warm-brown/50">
+                        (base : {portions || 1})
+                      </span>
+                    </span>
+                  </div>
+                </label>
+                {Number(portionsCible) > 0 && facteurScale !== 1 && (
+                  <span className="text-sm text-warm-brown/80">
+                    × {facteurScale.toFixed(2)}
+                  </span>
+                )}
+              </div>
+
+              {Number(portionsCible) > 0 && (
+                <ul className="grid sm:grid-cols-2 gap-2 text-sm">
+                  {composition.map((l) => {
+                    const ing = indexIngredient.get(l.ingredient_id)
+                    if (!ing) return null
+                    const qScale = l.quantite * facteurScale
+                    return (
+                      <li
+                        key={l.uid}
+                        className="flex items-baseline justify-between gap-3 rounded-xl bg-cream/60 px-3 py-2"
+                      >
+                        <span className="text-warm-brown truncate">
+                          {ing.nom}
+                        </span>
+                        <span className="font-medium text-warm-brown tabular-nums whitespace-nowrap">
+                          {qScale.toLocaleString('fr-CH', {
+                            maximumFractionDigits: 3,
+                          })}{' '}
+                          {UNITE_LABELS[l.unite]}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+              <p className="mt-2 text-xs text-warm-brown/60">
+                💡 Cet aperçu sert à préparer une commande de taille différente.
+                Il ne modifie pas la recette de base.
+              </p>
+            </div>
+          )}
         </section>
 
         {/* Production */}

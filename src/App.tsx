@@ -5,6 +5,7 @@ import Commandes from './pages/Commandes'
 import NouvelleCommande from './pages/NouvelleCommande'
 import FicheCommande from './pages/FicheCommande'
 import Calendrier from './pages/Calendrier'
+import Production from './pages/Production'
 import Recettes from './pages/Recettes'
 import NouvelleRecette from './pages/NouvelleRecette'
 import FicheRecette from './pages/FicheRecette'
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/commandes/nouvelle" element={<NouvelleCommande />} />
         <Route path="/commandes/:id" element={<FicheCommande />} />
         <Route path="/calendrier" element={<Calendrier />} />
+        <Route path="/production" element={<Production />} />
         <Route path="/recettes" element={<Recettes />} />
         <Route path="/recettes/nouvelle" element={<NouvelleRecette />} />
         <Route path="/recettes/:id" element={<FicheRecette />} />
