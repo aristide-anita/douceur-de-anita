@@ -9,6 +9,9 @@ import PhotoUpload from '../components/PhotoUpload'
 import CompositionRecette, {
   type LigneCompo,
 } from '../components/CompositionRecette'
+import TextareaIngredients from '../components/TextareaIngredients'
+import { useQuery } from '@tanstack/react-query'
+import type { Ingredient } from '../lib/types'
 
 const CATEGORIE_LABELS: Record<CategorieRecette, string> = {
   patisserie: 'Pâtisserie',
@@ -65,6 +68,21 @@ export default function NouvelleRecette() {
   const onCoutTotalChange = (cout: number) => {
     if (coutAuto) setCoutMatieres(cout.toFixed(2))
   }
+
+  // Charge les ingrédients pour le @-picker
+  const { data: ingredientsList = [] } = useQuery<Ingredient[]>({
+    queryKey: ['ingredients-actifs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ingredients')
+        .select('*')
+        .eq('actif', true)
+        .order('nom', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Ingredient[]
+    },
+    staleTime: 60_000,
+  })
 
   const calcul = useMemo(() => {
     const cm = Number(coutMatieres) || 0
@@ -202,12 +220,13 @@ export default function NouvelleRecette() {
               <span className="text-sm text-warm-brown/80 mb-2 block">
                 Description
               </span>
-              <textarea
+              <TextareaIngredients
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="input-field min-h-[10rem] resize-y"
+                onChange={setDescription}
+                ingredients={ingredientsList}
+                composition={composition}
                 rows={6}
-                placeholder="Ingrédients principaux, étapes, technique, allergènes, particularités…"
+                placeholder="Étapes, technique, particularités… Tape @ pour insérer un ingrédient."
               />
             </label>
           </div>

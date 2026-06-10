@@ -25,6 +25,7 @@ import PhotoUpload from '../components/PhotoUpload'
 import CompositionRecette, {
   type LigneCompo,
 } from '../components/CompositionRecette'
+import TextareaIngredients from '../components/TextareaIngredients'
 import { useToast } from '../components/Toast'
 
 const CATEGORIE_LABELS: Record<CategorieRecette, string> = {
@@ -487,11 +488,13 @@ export default function FicheRecette() {
               <span className="text-sm text-warm-brown/80 mb-2 block">
                 Description
               </span>
-              <textarea
+              <TextareaIngredients
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="input-field min-h-[10rem] resize-y"
+                onChange={setDescription}
+                ingredients={ingredientsListe}
+                composition={composition}
                 rows={6}
+                placeholder="Étapes, technique, particularités… Tape @ pour insérer un ingrédient."
               />
             </label>
           </div>
