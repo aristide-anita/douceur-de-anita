@@ -12,6 +12,9 @@ import Clients from './pages/Clients'
 import NouveauClient from './pages/NouveauClient'
 import FicheClient from './pages/FicheClient'
 import Finances from './pages/Finances'
+import Ingredients from './pages/Ingredients'
+import NouvelIngredient from './pages/NouvelIngredient'
+import FicheIngredient from './pages/FicheIngredient'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -40,6 +43,9 @@ export default function App() {
         <Route path="/clients/nouveau" element={<NouveauClient />} />
         <Route path="/clients/:id" element={<FicheClient />} />
         <Route path="/finances" element={<Finances />} />
+        <Route path="/ingredients" element={<Ingredients />} />
+        <Route path="/ingredients/nouveau" element={<NouvelIngredient />} />
+        <Route path="/ingredients/:id" element={<FicheIngredient />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

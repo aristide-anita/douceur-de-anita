@@ -14,8 +14,15 @@ import {
   Share2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { Recette, CategorieRecette } from '../lib/types'
+import {
+  Recette,
+  CategorieRecette,
+  RecetteIngredient,
+} from '../lib/types'
 import PhotoUpload from '../components/PhotoUpload'
+import CompositionRecette, {
+  type LigneCompo,
+} from '../components/CompositionRecette'
 
 const CATEGORIE_LABELS: Record<CategorieRecette, string> = {
   patisserie: 'Pâtisserie',
@@ -110,6 +117,12 @@ export default function FicheRecette() {
   const [prixVente, setPrixVente] = useState<string>('0')
   const [actif, setActif] = useState(true)
   const [favori, setFavori] = useState(false)
+  const [composition, setComposition] = useState<LigneCompo[]>([])
+  const [coutAuto, setCoutAuto] = useState(false)
+
+  const onCoutTotalChange = (cout: number) => {
+    if (coutAuto) setCoutMatieres(cout.toFixed(2))
+  }
 
   const { data, isLoading, error } = useQuery<Recette>({
     queryKey: ['recette', id],
@@ -122,6 +135,21 @@ export default function FicheRecette() {
         .single()
       if (error) throw error
       return data as Recette
+    },
+  })
+
+  // Charge la composition (recette_ingredients)
+  const { data: compositionDb = [] } = useQuery<RecetteIngredient[]>({
+    queryKey: ['recette-ingredients', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('recette_ingredients')
+        .select('*')
+        .eq('recette_id', id!)
+        .order('ordre', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as RecetteIngredient[]
     },
   })
 
@@ -145,6 +173,20 @@ export default function FicheRecette() {
     setActif(!!data.actif)
     setFavori(!!data.favori)
   }, [data])
+
+  // Hydrate la composition à partir de la DB
+  useEffect(() => {
+    setComposition(
+      compositionDb.map((c) => ({
+        uid: crypto.randomUUID(),
+        dbId: c.id,
+        ingredient_id: c.ingredient_id,
+        quantite: Number(c.quantite),
+        unite: c.unite,
+        note: c.note ?? '',
+      }))
+    )
+  }, [compositionDb])
 
   const calcul = useMemo(() => {
     const cm = Number(coutMatieres) || 0
@@ -181,10 +223,35 @@ export default function FicheRecette() {
         })
         .eq('id', id)
       if (error) throw error
+
+      // Sync composition: remplace toutes les lignes (simple et fiable pour V1).
+      const lignesValides = composition.filter(
+        (l) => l.ingredient_id && l.quantite > 0
+      )
+      const { error: errDel } = await supabase
+        .from('recette_ingredients')
+        .delete()
+        .eq('recette_id', id)
+      if (errDel) throw errDel
+      if (lignesValides.length > 0) {
+        const payload = lignesValides.map((l, i) => ({
+          recette_id: id,
+          ingredient_id: l.ingredient_id,
+          quantite: l.quantite,
+          unite: l.unite,
+          note: l.note?.trim() || null,
+          ordre: i,
+        }))
+        const { error: errIns } = await supabase
+          .from('recette_ingredients')
+          .insert(payload)
+        if (errIns) throw errIns
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['recettes'] })
       qc.invalidateQueries({ queryKey: ['recette', id] })
+      qc.invalidateQueries({ queryKey: ['recette-ingredients', id] })
       navigate('/recettes')
     },
     onError: (err: unknown) => {
@@ -404,6 +471,28 @@ export default function FicheRecette() {
           />
         </section>
 
+        {/* Composition */}
+        <section className="card">
+          <div className="flex flex-wrap items-end justify-between gap-2 mb-4">
+            <h2 className="font-serif text-xl">Composition</h2>
+            <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-warm-brown/80">
+              <input
+                type="checkbox"
+                checked={coutAuto}
+                onChange={(e) => setCoutAuto(e.target.checked)}
+                className="h-4 w-4 rounded border-soft-taupe text-warm-brown focus:ring-dusty-pink/50"
+              />
+              Calculer le coût matières automatiquement
+            </label>
+          </div>
+          <CompositionRecette
+            lignes={composition}
+            onChange={setComposition}
+            onCoutTotalChange={onCoutTotalChange}
+            disabled={sauver.isPending || supprimer.isPending}
+          />
+        </section>
+
         {/* Production */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Production</h2>
@@ -443,7 +532,10 @@ export default function FicheRecette() {
           <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
             <label className="block">
               <span className="text-sm text-warm-brown/80 mb-2 block">
-                Matières (CHF)
+                Matières (CHF){' '}
+                {coutAuto && (
+                  <span className="text-xs text-warm-brown/50">(auto)</span>
+                )}
               </span>
               <input
                 type="number"
@@ -451,7 +543,8 @@ export default function FicheRecette() {
                 step={0.05}
                 value={coutMatieres}
                 onChange={(e) => setCoutMatieres(e.target.value)}
-                className="input-field"
+                disabled={coutAuto}
+                className="input-field disabled:bg-soft-taupe/20 disabled:cursor-not-allowed"
               />
             </label>
             <label className="block">

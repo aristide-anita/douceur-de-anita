@@ -182,6 +182,33 @@ export interface Ingredient {
   modifie_le: string
 }
 
+// ---------- Recette ↔ Ingredient (composition d'une recette) ----------
+
+export interface RecetteIngredient {
+  id: string
+  recette_id: string
+  ingredient_id: string
+  quantite: number
+  unite: UniteIngredient
+  note: string | null
+  ordre: number
+  cree_le: string
+}
+
+export interface RecetteIngredientAvecIng extends RecetteIngredient {
+  ingredient: Pick<Ingredient, 'id' | 'nom' | 'unite_achat' | 'prix_unitaire_chf'> | null
+}
+
+export const UNITE_LABELS: Record<UniteIngredient, string> = {
+  g: 'g',
+  kg: 'kg',
+  ml: 'ml',
+  l: 'l',
+  piece: 'pièce',
+  cuillere: 'cuillère',
+  pincee: 'pincée',
+}
+
 // ---------- Labels d'UI ----------
 
 export const STATUT_COMMANDE_LABELS: Record<StatutCommande, string> = {

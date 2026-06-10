@@ -6,6 +6,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { CategorieRecette } from '../lib/types'
 import PhotoUpload from '../components/PhotoUpload'
+import CompositionRecette, {
+  type LigneCompo,
+} from '../components/CompositionRecette'
 
 const CATEGORIE_LABELS: Record<CategorieRecette, string> = {
   patisserie: 'Pâtisserie',
@@ -55,6 +58,14 @@ export default function NouvelleRecette() {
   const [favori, setFavori] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
+  // Composition (ingrédients)
+  const [composition, setComposition] = useState<LigneCompo[]>([])
+  const [coutAuto, setCoutAuto] = useState(true)
+
+  const onCoutTotalChange = (cout: number) => {
+    if (coutAuto) setCoutMatieres(cout.toFixed(2))
+  }
+
   const calcul = useMemo(() => {
     const cm = Number(coutMatieres) || 0
     const ce = Number(coutEmballage) || 0
@@ -93,7 +104,27 @@ export default function NouvelleRecette() {
         .select('id')
         .single()
       if (error) throw error
-      return data.id as string
+      const recetteId = data.id as string
+
+      // Insère les lignes de composition (si présentes)
+      const lignesValides = composition.filter(
+        (l) => l.ingredient_id && l.quantite > 0
+      )
+      if (lignesValides.length > 0) {
+        const payload = lignesValides.map((l, i) => ({
+          recette_id: recetteId,
+          ingredient_id: l.ingredient_id,
+          quantite: l.quantite,
+          unite: l.unite,
+          note: l.note?.trim() || null,
+          ordre: i,
+        }))
+        const { error: errIng } = await supabase
+          .from('recette_ingredients')
+          .insert(payload)
+        if (errIng) throw errIng
+      }
+      return recetteId
     },
     onSuccess: (id) => {
       qc.invalidateQueries({ queryKey: ['recettes'] })
@@ -192,6 +223,28 @@ export default function NouvelleRecette() {
           />
         </section>
 
+        {/* Composition (ingrédients) */}
+        <section className="card">
+          <div className="flex flex-wrap items-end justify-between gap-2 mb-4">
+            <h2 className="font-serif text-xl">Composition</h2>
+            <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-warm-brown/80">
+              <input
+                type="checkbox"
+                checked={coutAuto}
+                onChange={(e) => setCoutAuto(e.target.checked)}
+                className="h-4 w-4 rounded border-soft-taupe text-warm-brown focus:ring-dusty-pink/50"
+              />
+              Calculer le coût matières automatiquement
+            </label>
+          </div>
+          <CompositionRecette
+            lignes={composition}
+            onChange={setComposition}
+            onCoutTotalChange={onCoutTotalChange}
+            disabled={enregistrer.isPending}
+          />
+        </section>
+
         {/* Production */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Production</h2>
@@ -231,7 +284,10 @@ export default function NouvelleRecette() {
           <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
             <label className="block">
               <span className="text-sm text-warm-brown/80 mb-2 block">
-                Matières (CHF)
+                Matières (CHF){' '}
+                {coutAuto && (
+                  <span className="text-xs text-warm-brown/50">(auto)</span>
+                )}
               </span>
               <input
                 type="number"
@@ -239,7 +295,8 @@ export default function NouvelleRecette() {
                 step={0.05}
                 value={coutMatieres}
                 onChange={(e) => setCoutMatieres(e.target.value)}
-                className="input-field"
+                disabled={coutAuto}
+                className="input-field disabled:bg-soft-taupe/20 disabled:cursor-not-allowed"
               />
             </label>
             <label className="block">

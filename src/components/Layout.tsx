@@ -5,6 +5,7 @@ import {
   Home,
   LogOut,
   ShoppingBag,
+  Sprout,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/calendrier', label: 'Calendrier', icon: CalendarDays },
   { to: '/commandes', label: 'Commandes', icon: ShoppingBag },
   { to: '/recettes', label: 'Recettes', icon: BookOpen },
+  { to: '/ingredients', label: 'Ingrédients', icon: Sprout },
   { to: '/clients', label: 'Clients', icon: Users },
   { to: '/finances', label: 'Finances', icon: Wallet },
 ]
@@ -94,7 +96,7 @@ export default function Layout() {
         aria-label="Navigation principale"
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-soft-taupe/70 bg-cream/95 backdrop-blur pb-safe print:!hidden"
       >
-        <ul className="grid grid-cols-6">
+        <ul className="grid grid-cols-7">
           {navItems.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <NavLink
