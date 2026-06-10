@@ -31,7 +31,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-cream text-warm-brown">
       {/* Desktop / tablet top bar */}
-      <header className="hidden md:flex sticky top-0 z-30 items-center justify-between border-b border-soft-taupe/60 bg-cream/90 backdrop-blur px-8 py-4 pt-safe">
+      <header className="hidden md:flex sticky top-0 z-30 items-center justify-between border-b border-soft-taupe/60 bg-cream/90 backdrop-blur px-8 py-4 pt-safe print:!hidden">
         <div className="flex items-center gap-3">
           <div
             aria-hidden="true"
@@ -59,7 +59,7 @@ export default function Layout() {
 
       <div className="md:flex">
         {/* Desktop / tablet sidebar */}
-        <aside className="hidden md:flex md:w-60 lg:w-64 shrink-0 flex-col gap-1 border-r border-soft-taupe/60 bg-cream/50 px-4 py-6">
+        <aside className="hidden md:flex md:w-60 lg:w-64 shrink-0 flex-col gap-1 border-r border-soft-taupe/60 bg-cream/50 px-4 py-6 print:!hidden">
           <nav className="flex flex-col gap-1" aria-label="Navigation principale">
             {navItems.map(({ to, label, icon: Icon }) => (
               <NavLink
@@ -92,7 +92,7 @@ export default function Layout() {
       {/* Mobile bottom navigation */}
       <nav
         aria-label="Navigation principale"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-soft-taupe/70 bg-cream/95 backdrop-blur pb-safe"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-soft-taupe/70 bg-cream/95 backdrop-blur pb-safe print:!hidden"
       >
         <ul className="grid grid-cols-6">
           {navItems.map(({ to, label, icon: Icon }) => (

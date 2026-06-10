@@ -45,7 +45,7 @@ export default function NouvelleRecette() {
   const [nom, setNom] = useState('')
   const [categorie, setCategorie] = useState<CategorieRecette>('patisserie')
   const [description, setDescription] = useState('')
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photos, setPhotos] = useState<string[]>([])
   const [portions, setPortions] = useState<string>('1')
   const [tempsPrepa, setTempsPrepa] = useState<string>('0')
   const [coutMatieres, setCoutMatieres] = useState<string>('0')
@@ -79,7 +79,8 @@ export default function NouvelleRecette() {
           nom: nom.trim(),
           categorie,
           description: description.trim() || null,
-          photo_url: photoUrl,
+          photo_url: photos[0] ?? null,
+          photos,
           portions: Number(portions) || 1,
           temps_prepa_min: Number(tempsPrepa) || 0,
           cout_matieres_forfait: Number(coutMatieres) || 0,
@@ -104,7 +105,7 @@ export default function NouvelleRecette() {
   })
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <Link
         to="/recettes"
         className="inline-flex items-center gap-1.5 text-sm text-warm-brown/70 hover:text-warm-brown mb-4"
@@ -132,9 +133,9 @@ export default function NouvelleRecette() {
         {/* Identité */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Identité</h2>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
             <label className="block sm:col-span-2">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Nom *
               </span>
               <input
@@ -147,7 +148,7 @@ export default function NouvelleRecette() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Catégorie
               </span>
               <select
@@ -167,26 +168,26 @@ export default function NouvelleRecette() {
               </select>
             </label>
             <label className="block sm:col-span-3">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Description
               </span>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="input-field min-h-[5rem]"
-                rows={2}
-                placeholder="Ingrédients principaux, technique, particularités…"
+                className="input-field min-h-[10rem] resize-y"
+                rows={6}
+                placeholder="Ingrédients principaux, étapes, technique, allergènes, particularités…"
               />
             </label>
           </div>
         </section>
 
-        {/* Photo */}
+        {/* Photos */}
         <section className="card">
-          <h2 className="font-serif text-xl mb-4">Photo</h2>
+          <h2 className="font-serif text-xl mb-4">Photos</h2>
           <PhotoUpload
-            value={photoUrl}
-            onChange={setPhotoUrl}
+            value={photos}
+            onChange={setPhotos}
             disabled={enregistrer.isPending}
           />
         </section>
@@ -194,9 +195,9 @@ export default function NouvelleRecette() {
         {/* Production */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Production</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Portions
               </span>
               <input
@@ -209,7 +210,7 @@ export default function NouvelleRecette() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Temps de préparation (min)
               </span>
               <input
@@ -227,9 +228,9 @@ export default function NouvelleRecette() {
         {/* Coûts & prix */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Coûts & prix</h2>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Matières (CHF)
               </span>
               <input
@@ -242,7 +243,7 @@ export default function NouvelleRecette() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Emballage (CHF)
               </span>
               <input
@@ -255,7 +256,7 @@ export default function NouvelleRecette() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Prix de vente (CHF)
               </span>
               <input

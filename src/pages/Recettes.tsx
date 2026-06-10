@@ -201,6 +201,8 @@ export default function Recettes() {
           {recettesFiltrees.map((r) => {
             const { brut, pct } = calculerMarge(r)
             const margePositive = brut >= 0
+            const vignette = r.photos?.[0] ?? r.photo_url
+            const nbPhotos = r.photos?.length ?? 0
             return (
               <li key={r.id}>
                 <Link
@@ -209,9 +211,9 @@ export default function Recettes() {
                 >
                   {/* Photo (ou placeholder) */}
                   <div className="relative w-full h-44 bg-soft-taupe/20 overflow-hidden">
-                    {r.photo_url ? (
+                    {vignette ? (
                       <img
-                        src={r.photo_url}
+                        src={vignette}
                         alt={r.nom}
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -223,6 +225,11 @@ export default function Recettes() {
                           aria-hidden="true"
                         />
                       </div>
+                    )}
+                    {nbPhotos > 1 && (
+                      <span className="absolute bottom-2 right-2 rounded-full bg-warm-brown/80 text-cream text-xs px-2 py-0.5">
+                        +{nbPhotos - 1} photo{nbPhotos - 1 > 1 ? 's' : ''}
+                      </span>
                     )}
                     {!r.actif && (
                       <span className="absolute top-2 right-2 rounded-full bg-cream/90 text-warm-brown/80 text-xs px-2 py-0.5 backdrop-blur">

@@ -96,7 +96,10 @@ export interface Recette {
   nom: string
   categorie: CategorieRecette
   description: string | null
+  /** @deprecated Conservé pour rétro-compat. Utiliser `photos[0]` à la place. */
   photo_url: string | null
+  /** Galerie de photos. Le 1er élément sert de vignette. */
+  photos: string[] | null
   portions: number
   temps_prepa_min: number
   cout_matieres_forfait: number

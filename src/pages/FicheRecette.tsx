@@ -8,6 +8,10 @@ import {
   Trash2,
   Save,
   Star,
+  Printer,
+  Mail,
+  MessageCircle,
+  Share2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Recette, CategorieRecette } from '../lib/types'
@@ -27,6 +31,50 @@ function formatCHF(n: number): string {
     currency: 'CHF',
     minimumFractionDigits: 2,
   }).format(n)
+}
+
+function texteRecette(r: Recette, photos: string[]): string {
+  const lignes: string[] = []
+  lignes.push(`${r.nom}`)
+  lignes.push(`${CATEGORIE_LABELS[r.categorie]}`)
+  if (r.portions) lignes.push(`Portions : ${r.portions}`)
+  if (r.temps_prepa_min)
+    lignes.push(`Préparation : ${r.temps_prepa_min} min`)
+  if (r.description?.trim()) {
+    lignes.push('')
+    lignes.push(r.description.trim())
+  }
+  if (photos[0]) {
+    lignes.push('')
+    lignes.push(`Photo : ${photos[0]}`)
+  }
+  lignes.push('')
+  lignes.push('— Partagé depuis DouceurDeANITA')
+  return lignes.join('\n')
+}
+
+function mailtoRecette(r: Recette, photos: string[]): string {
+  const sujet = encodeURIComponent(`Recette : ${r.nom}`)
+  const corps = encodeURIComponent(texteRecette(r, photos))
+  return `mailto:?subject=${sujet}&body=${corps}`
+}
+
+function whatsappRecette(r: Recette, photos: string[]): string {
+  const txt = encodeURIComponent(texteRecette(r, photos))
+  return `https://wa.me/?text=${txt}`
+}
+
+async function partagerNatif(r: Recette, photos: string[]) {
+  try {
+    await (navigator as Navigator & {
+      share: (data: { title?: string; text?: string }) => Promise<void>
+    }).share({
+      title: r.nom,
+      text: texteRecette(r, photos),
+    })
+  } catch {
+    // L'utilisateur a annulé le partage, ignore.
+  }
 }
 
 function lireErreur(err: unknown): string {
@@ -54,7 +102,7 @@ export default function FicheRecette() {
   const [nom, setNom] = useState('')
   const [categorie, setCategorie] = useState<CategorieRecette>('patisserie')
   const [description, setDescription] = useState('')
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photos, setPhotos] = useState<string[]>([])
   const [portions, setPortions] = useState<string>('1')
   const [tempsPrepa, setTempsPrepa] = useState<string>('0')
   const [coutMatieres, setCoutMatieres] = useState<string>('0')
@@ -82,7 +130,13 @@ export default function FicheRecette() {
     setNom(data.nom ?? '')
     setCategorie(data.categorie)
     setDescription(data.description ?? '')
-    setPhotoUrl(data.photo_url ?? null)
+    setPhotos(
+      data.photos && data.photos.length > 0
+        ? data.photos
+        : data.photo_url
+          ? [data.photo_url]
+          : []
+    )
     setPortions(String(data.portions ?? 1))
     setTempsPrepa(String(data.temps_prepa_min ?? 0))
     setCoutMatieres(String(data.cout_matieres_forfait ?? 0))
@@ -114,7 +168,8 @@ export default function FicheRecette() {
           nom: nom.trim(),
           categorie,
           description: description.trim() || null,
-          photo_url: photoUrl,
+          photo_url: photos[0] ?? null,
+          photos,
           portions: Number(portions) || 1,
           temps_prepa_min: Number(tempsPrepa) || 0,
           cout_matieres_forfait: Number(coutMatieres) || 0,
@@ -193,30 +248,93 @@ export default function FicheRecette() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <Link
         to="/recettes"
-        className="inline-flex items-center gap-1.5 text-sm text-warm-brown/70 hover:text-warm-brown mb-4"
+        className="inline-flex items-center gap-1.5 text-sm text-warm-brown/70 hover:text-warm-brown mb-4 print:hidden"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Retour aux recettes
       </Link>
 
-      <header className="mb-8">
-        <h1 className="font-serif text-3xl sm:text-4xl tracking-tight flex items-center gap-2">
-          {favori && (
-            <Star
-              className="h-6 w-6 fill-caramel text-caramel"
-              aria-label="Favori"
-            />
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 print:hidden">
+        <div className="min-w-0">
+          <h1 className="font-serif text-3xl sm:text-4xl tracking-tight flex items-center gap-2">
+            {favori && (
+              <Star
+                className="h-6 w-6 fill-caramel text-caramel"
+                aria-label="Favori"
+              />
+            )}
+            {data.nom}
+          </h1>
+          <p className="text-sm text-warm-brown/60 mt-1">
+            {CATEGORIE_LABELS[data.categorie]}
+            {!data.actif && ' · Inactif'}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={mailtoRecette(data, photos)}
+            className="inline-flex items-center gap-2 rounded-2xl bg-cream/80 hover:bg-soft-taupe/40 border border-soft-taupe/60 px-3 py-2 text-sm font-medium text-warm-brown min-h-[40px]"
+            title="Envoyer par email"
+          >
+            <Mail className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Email</span>
+          </a>
+          <a
+            href={whatsappRecette(data, photos)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-200 px-3 py-2 text-sm font-medium min-h-[40px]"
+            title="Partager sur WhatsApp"
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </a>
+          {typeof navigator !== 'undefined' && 'share' in navigator && (
+            <button
+              type="button"
+              onClick={() => partagerNatif(data, photos)}
+              className="inline-flex items-center gap-2 rounded-2xl bg-cream/80 hover:bg-soft-taupe/40 border border-soft-taupe/60 px-3 py-2 text-sm font-medium text-warm-brown min-h-[40px]"
+              title="Partager"
+            >
+              <Share2 className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Partager</span>
+            </button>
           )}
-          {data.nom}
-        </h1>
-        <p className="text-sm text-warm-brown/60 mt-1">
-          {CATEGORIE_LABELS[data.categorie]}
-          {!data.actif && ' · Inactif'}
-        </p>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-2xl bg-cream/80 hover:bg-soft-taupe/40 border border-soft-taupe/60 px-3 py-2 text-sm font-medium text-warm-brown min-h-[40px]"
+            title="Imprimer"
+          >
+            <Printer className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Imprimer</span>
+          </button>
+        </div>
       </header>
+
+      {/* Vue impression : titre + photo + description (le reste est caché par .no-print) */}
+      <section className="hidden print:block mb-4">
+        <h1 className="font-serif text-3xl text-warm-brown">{data.nom}</h1>
+        <p className="text-sm text-warm-brown/70 mt-1">
+          {CATEGORIE_LABELS[data.categorie]} · {data.portions} portion
+          {data.portions > 1 ? 's' : ''} · {data.temps_prepa_min} min de préparation
+        </p>
+        {photos[0] && (
+          <img
+            src={photos[0]}
+            alt={data.nom}
+            className="mt-4 max-h-72 object-cover rounded"
+          />
+        )}
+        {data.description && (
+          <pre className="whitespace-pre-wrap font-sans text-sm text-warm-brown mt-4 leading-relaxed">
+            {data.description}
+          </pre>
+        )}
+      </section>
 
       <form
         onSubmit={(e) => {
@@ -224,14 +342,14 @@ export default function FicheRecette() {
           setErreur(null)
           sauver.mutate()
         }}
-        className="grid gap-6"
+        className="grid gap-6 print:hidden"
       >
         {/* Identité */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Identité</h2>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
             <label className="block sm:col-span-2">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Nom *
               </span>
               <input
@@ -243,7 +361,7 @@ export default function FicheRecette() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Catégorie
               </span>
               <select
@@ -263,25 +381,25 @@ export default function FicheRecette() {
               </select>
             </label>
             <label className="block sm:col-span-3">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Description
               </span>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="input-field min-h-[5rem]"
-                rows={2}
+                className="input-field min-h-[10rem] resize-y"
+                rows={6}
               />
             </label>
           </div>
         </section>
 
-        {/* Photo */}
+        {/* Photos */}
         <section className="card">
-          <h2 className="font-serif text-xl mb-4">Photo</h2>
+          <h2 className="font-serif text-xl mb-4">Photos</h2>
           <PhotoUpload
-            value={photoUrl}
-            onChange={setPhotoUrl}
+            value={photos}
+            onChange={setPhotos}
             disabled={sauver.isPending || supprimer.isPending}
           />
         </section>
@@ -289,9 +407,9 @@ export default function FicheRecette() {
         {/* Production */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Production</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Portions
               </span>
               <input
@@ -304,7 +422,7 @@ export default function FicheRecette() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Temps de préparation (min)
               </span>
               <input
@@ -322,9 +440,9 @@ export default function FicheRecette() {
         {/* Coûts & prix */}
         <section className="card">
           <h2 className="font-serif text-xl mb-4">Coûts & prix</h2>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Matières (CHF)
               </span>
               <input
@@ -337,7 +455,7 @@ export default function FicheRecette() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Emballage (CHF)
               </span>
               <input
@@ -350,7 +468,7 @@ export default function FicheRecette() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-warm-brown/80 mb-1.5 inline-block">
+              <span className="text-sm text-warm-brown/80 mb-2 block">
                 Prix de vente (CHF)
               </span>
               <input
