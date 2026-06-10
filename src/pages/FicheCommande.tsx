@@ -10,6 +10,8 @@ import {
   Phone,
   Mail,
   Save,
+  FileText,
+  MessageCircle,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
@@ -22,6 +24,11 @@ import {
   STATUT_COMMANDE_LABELS,
   STATUT_PAIEMENT_LABELS,
 } from '../lib/types'
+import {
+  genererFacturePDF,
+  telechargerBlob,
+  texteFacture,
+} from '../lib/facture'
 
 interface LigneArticle {
   id: string // local uuid (UI key)
@@ -34,7 +41,10 @@ interface LigneArticle {
 }
 
 interface CommandeComplete extends Commande {
-  client: Pick<Client, 'id' | 'nom' | 'telephone' | 'email'> | null
+  client: Pick<
+    Client,
+    'id' | 'nom' | 'telephone' | 'email' | 'adresse' | 'ville' | 'code_postal'
+  > | null
   items: CommandeItem[]
 }
 
@@ -99,7 +109,7 @@ export default function FicheCommande() {
       const { data, error } = await supabase
         .from('commandes')
         .select(
-          '*, client:clients(id, nom, telephone, email), items:commande_items(*)'
+          '*, client:clients(id, nom, telephone, email, adresse, ville, code_postal), items:commande_items(*)'
         )
         .eq('id', id)
         .single()
@@ -376,6 +386,53 @@ export default function FicheCommande() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Actions facture */}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const { blob, filename } = genererFacturePDF({
+                commande: data,
+                client: data.client,
+                items: data.items,
+                recettes,
+              })
+              telechargerBlob(blob, filename)
+            }}
+            className="inline-flex items-center gap-2 rounded-2xl bg-warm-brown text-cream px-4 py-2 text-sm font-medium hover:bg-warm-brown/90 min-h-[40px]"
+            title="Télécharger la facture en PDF"
+          >
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            Facture PDF
+          </button>
+          {data.client?.email && (
+            <a
+              href={`mailto:${data.client.email}?subject=${encodeURIComponent(
+                `Votre facture${
+                  data.numero_commande ? ` n° ${data.numero_commande}` : ''
+                }`
+              )}&body=${encodeURIComponent(texteFacture(data, data.client))}`}
+              className="inline-flex items-center gap-2 rounded-2xl bg-cream/80 hover:bg-soft-taupe/40 border border-soft-taupe/60 px-4 py-2 text-sm font-medium text-warm-brown min-h-[40px]"
+              title="Composer un email (joindre le PDF manuellement)"
+            >
+              <Mail className="h-4 w-4" aria-hidden="true" />
+              Email
+            </a>
+          )}
+          <a
+            href={`https://wa.me/${
+              (data.client?.telephone ?? '').replace(/[^\d]/g, '')
+            }?text=${encodeURIComponent(texteFacture(data, data.client))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-200 px-4 py-2 text-sm font-medium min-h-[40px]"
+            title="Partager sur WhatsApp (joindre le PDF manuellement)"
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            WhatsApp
+          </a>
         </div>
       </header>
 
